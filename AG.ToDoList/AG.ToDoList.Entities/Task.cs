@@ -15,5 +15,11 @@ namespace AG.ToDoList.Entities
         public bool IsDone { get; set; }
         public bool IsExpired => DateTime.Now > DueDate;
         public int ProjectId { get; set; }
+
+        public override string ToString()
+        {
+            return $"ID: {Id}. {Title}{Environment.NewLine}{Comment}{(string.IsNullOrWhiteSpace(Comment) ? string.Empty : Environment.NewLine)}" +
+                $"{DueDate}; done: {IsDone}; expired: {IsExpired}";
+        }
     }
 }

@@ -26,6 +26,7 @@ namespace AG.ToDoList.PL.ConsoleUI
             while (true)
             {
                 Console.Clear();
+                Console.WriteLine("Projects:");
                 ShowProjectsList(projects);
                 Console.WriteLine();
                 ProjectMenu();
@@ -57,6 +58,11 @@ namespace AG.ToDoList.PL.ConsoleUI
                         Console.ReadLine();
                         break;
                     case 5:
+                        {
+                            var project = GetProjectById(projects);
+                            EditTasks(project);
+                            break;
+                        }
                     case 0:
                         {
                             return;
@@ -73,6 +79,286 @@ namespace AG.ToDoList.PL.ConsoleUI
             }
         }
 
+        private static Project GetProjectById(IEnumerable<Project> projects)
+        {
+            while(true)
+            {
+                Console.WriteLine("Enter the ID of a project:");
+                var id = GetId();
+                var project = projects.FirstOrDefault(a => a.Id == id);
+                if (project == null)
+                {
+                    Console.WriteLine("No project with such ID.");
+                    continue;
+                }
+                return project;
+            }
+        }
+
+        private static void EditTasks(Project project)
+        {
+            while (true)
+            {
+                Console.Clear();
+                Console.WriteLine($"Project:{Environment.NewLine}{project}");
+                var tasks = GetTasksByProject(project);
+                ShowTasksList(tasks);
+                Console.WriteLine();
+                TaskMenu();
+
+                int select;
+                if (!int.TryParse(Console.ReadLine(),out select))
+                {
+                    Console.WriteLine("WRONG INPUT");
+                    Console.ReadLine();
+                    continue;
+                }
+
+                switch (select)
+                {
+                    case 1:
+                        AddTask(project);
+                        Console.ReadLine();
+                        break;
+                    case 2:
+                        RenameTask(tasks);
+                        Console.ReadLine();
+                        break;
+                    case 3:
+                        ChangeTaskComment(tasks);
+                        Console.ReadLine();
+                        break;
+                    case 4:
+                        ChangeDueDate(tasks);
+                        Console.ReadLine();
+                        break;
+                    case 5:
+                        {
+                            ChangeDoneMark(tasks);
+                            Console.ReadLine();
+                            break;
+                        }
+                    case 6:
+                        {
+                            RemoveTask(tasks);
+                            Console.ReadLine();
+                            break;
+                        }
+                    case 0:
+                        {
+                            return;
+                        }
+                    default:
+                        {
+                            Console.WriteLine("Wrong number. Try again.");
+                            Console.ReadLine();
+                            break;
+                        }
+                }
+
+            }
+        }
+
+        private static void RenameTask(IEnumerable<Task> tasks)
+        {
+            PrepareTaskChange(tasks,"title",out var task,out var newTitle);
+
+            if (task == null)
+            {
+                return;
+            }
+
+            task.Title = newTitle;
+
+            if (_taskLogic.Update(task) == 1)
+            {
+                Console.WriteLine("Task's title has been changed.");
+            }
+            else
+            {
+                Console.WriteLine("Cannot change task's title.");
+            }
+        }
+
+        private static void ChangeTaskComment(IEnumerable<Task> tasks)
+        {
+            PrepareTaskChange(tasks,"comment",out var task,out var newComment);
+
+            if(task == null)
+            {
+                return;
+            }
+
+            task.Comment = newComment;
+
+            if (_taskLogic.Update(task) == 1)
+            {
+                Console.WriteLine("Task's comment has been changed.");
+            }
+            else
+            {
+                Console.WriteLine("Cannot change task's comment.");
+            }
+        }
+
+        private static void ChangeDueDate(IEnumerable<Task> tasks)
+        {
+            var task = SelectTaskFromProject(tasks);
+            if (task == null)
+            {
+                Console.WriteLine("No task with such ID.");
+                return;
+            }
+
+            DateTime newDueDate;
+            Console.WriteLine("Enter date and time in the following format: DD-MM-YYYY HH:MM");
+            while (!DateTime.TryParse(Console.ReadLine(), out newDueDate))
+            {
+                Console.WriteLine("Wrong date format. Try again.");
+            }
+
+            task.DueDate = newDueDate;
+            if (_taskLogic.Update(task) == 1)
+            {
+                Console.WriteLine("Task's due date has been changed.");
+            }
+            else
+            {
+                Console.WriteLine("Cannot change task's due date.");
+            }
+        }
+
+        private static void ChangeDoneMark(IEnumerable<Task> tasks)
+        {
+            var task = SelectTaskFromProject(tasks);
+            if (task == null)
+            {
+                Console.WriteLine("No task with such ID.");
+                return;
+            }
+
+            task.IsDone = !task.IsDone;
+            if (_taskLogic.Update(task) == 1)
+            {
+                Console.WriteLine("Task's done mark has been changed.");
+            }
+            else
+            {
+                Console.WriteLine("Cannot change task's done mark.");
+            }
+        }
+
+        private static void PrepareTaskChange(IEnumerable<Task> tasks, string propertyName,
+                                              out Task task, out string newPropertyValue)
+        {
+            task = SelectTaskFromProject(tasks);
+            if (task == null)
+            {
+                Console.WriteLine("No task with such ID.");
+                newPropertyValue = "";
+                return;
+            }
+            Console.WriteLine($"Enter the task's new {propertyName}:");
+            while (string.IsNullOrWhiteSpace(newPropertyValue = Console.ReadLine()) && propertyName.Equals("title"))
+            {
+                Console.WriteLine($"Task's {propertyName} cannot be empty or consist only of whitespace. Try again.");
+            }
+        }
+
+        private static Task SelectTaskFromProject(IEnumerable<Task> tasks)
+        {
+            Console.WriteLine("Enter ID of a task you want to change:");
+            var id = GetId();
+
+            return tasks.FirstOrDefault(a => a.Id == id);
+        }
+
+        private static void AddTask(Project project)
+        {
+            var task = CreateTask();
+            task.ProjectId = project.Id;
+
+            _taskLogic.Insert(task);
+            Console.WriteLine($"The task has been added. Task's ID is {task.Id}.");
+        }
+
+        private static Task CreateTask()
+        {
+            Console.WriteLine("Enter task's title:");
+            string title;
+            while (string.IsNullOrWhiteSpace(title = Console.ReadLine()))
+            {
+                Console.WriteLine("Title cannot be empty or consist only of whitespace.");
+            }
+
+            Console.WriteLine("Enter task's comment:");
+            string comment = Console.ReadLine();
+            //while (string.IsNullOrWhiteSpace(comment = Console.ReadLine()))
+            //{
+            //    Console.WriteLine("Comment cannot be empty or consist only of whitespace.");
+            //}
+
+            DateTime dueDate;
+            Console.WriteLine("Enter date and time in the following format: DD-MM-YYYY HH:MM");
+            while (true)
+            {
+                string stringDate = Console.ReadLine();
+                if (string.IsNullOrWhiteSpace(stringDate))
+                {
+                    dueDate = DateTime.Now.AddDays(1);
+                    break;
+                }
+
+                if (!DateTime.TryParse(stringDate,out dueDate))
+                {
+                    Console.WriteLine("Wrong input");
+                    continue;
+                }
+                break;
+            }
+
+            return new Task
+            {
+                Title = title,
+                Comment = comment,
+                DueDate = dueDate,
+                IsDone = false
+            };
+        }
+
+        private static void RemoveTask(IEnumerable<Task> tasks)
+        {
+            Console.WriteLine("Enter ID of a task you want to remove:");
+            var id = GetId();
+
+            var task = tasks.FirstOrDefault(a => a.Id == id);
+            if (task == null)
+            {
+                Console.WriteLine("No task with such ID.");
+                return;
+            }
+
+            if (_taskLogic.DeleteById(id) == 1)
+            {
+                Console.WriteLine("Task has been deleted.");
+                return;
+            }
+
+            Console.WriteLine("Task cannot be deleted.");
+        }
+
+        private static void TaskMenu()
+        {
+            Console.WriteLine("Select what to do:");
+            Console.WriteLine("1. Add task.");
+            Console.WriteLine("2. Rename task.");
+            Console.WriteLine("3. Change task's comment.");
+            Console.WriteLine("4. Change due date");
+            Console.WriteLine("5. Change \"done\" mark");
+            Console.WriteLine("6. Remove task.");
+            Console.WriteLine($"0. Exit.{Environment.NewLine}");
+        }
+
         /// <summary>
         /// Gets a project's name and comment from a user
         /// and inserts it into the DB
@@ -80,7 +366,12 @@ namespace AG.ToDoList.PL.ConsoleUI
         private static void AddProject()
         {
             Console.WriteLine("Enter a project's name:");
-            string name = Console.ReadLine();
+            string name;
+            while (string.IsNullOrWhiteSpace(name = Console.ReadLine()))
+            {
+                Console.WriteLine("Project's name cannot be empty or consist only of whitespace.");
+            }
+
             Console.WriteLine("Enter a comment to the project:");
             string comment = Console.ReadLine();
 
@@ -229,6 +520,21 @@ namespace AG.ToDoList.PL.ConsoleUI
             foreach (var project in projects)
             {
                 Console.WriteLine(project);
+            }
+        }
+
+        private static void ShowTasksList(IEnumerable<Task> tasks)
+        {
+            if (tasks.Count() == 0)
+            {
+                Console.WriteLine("No tasks.");
+                return;
+            }
+
+            Console.WriteLine($"{Environment.NewLine}Tasks:");
+            foreach (var task in tasks)
+            {
+                Console.WriteLine(task.ToString() + Environment.NewLine);
             }
         }
     }

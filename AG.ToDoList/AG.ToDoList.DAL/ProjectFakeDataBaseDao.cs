@@ -17,7 +17,19 @@ namespace AG.ToDoList.DAL
         {
             var projects = _db.Projects;
 
-            return projects.Remove(id) ? 1 : 0;
+            var removeResult = projects.Remove(id);
+            if(removeResult)
+            {
+                var tasks = _db.Tasks;
+                var idsToRemove = tasks.Where(a => a.Value.ProjectId == id).Select(a => a.Value.Id).ToList();
+                foreach (var idToRemove in idsToRemove)
+                {
+                    tasks.Remove(idToRemove);
+                }
+                return 1;
+            }
+
+            return 0;
         }
 
         public Project Insert(Project project)

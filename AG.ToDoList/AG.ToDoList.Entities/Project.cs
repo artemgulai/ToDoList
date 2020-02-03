@@ -18,7 +18,7 @@ namespace AG.ToDoList.Entities
 
         public override string ToString()
         {
-            return $"ID {Id}: {Name}{Environment.NewLine}\t{Comment}";
+            return $"ID {Id}: {Name}{(string.IsNullOrWhiteSpace(Comment) ? string.Empty : Environment.NewLine)}\t{Comment}";
         }
     }
 }
